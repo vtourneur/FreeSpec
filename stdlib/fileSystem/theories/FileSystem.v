@@ -2,7 +2,7 @@
  * Copyright (C) 2018–2019 ANSSI
  *
  * Contributors:
- * 2019 Thomas Letan <thomas.letan@ssi.gouv.fr>
+ * 2019 Vincent Tourneur <vincent.tourneur@inria.fr>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,28 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *)
 
-val char_of_coqascii: Constr.constr -> char
-val char_to_coqascii: char -> Constr.constr
+Require Import FreeSpec.Exec.
+Require Export Coq.Strings.String.
+Require Import FreeSpec.Program.
+Require Import BinNums.
 
-val bytes_of_coqstr: Constr.constr -> bytes
-val bytes_to_coqstr: bytes -> Constr.constr
+Module FileSystem.
+  Inductive i: Type -> Type :=
+  | Open: string -> i Z
+  | Read: Z -> i string
+  | Close: Z -> i unit.
 
-val string_to_coqstr: string -> Constr.constr
-val string_of_coqstr: Constr.constr -> string
+  Definition open {ix} `{Use i ix} (str: string)
+    : Program ix Z :=
+    request (Open str).
+
+  Definition read {ix} `{Use i ix} (fd: Z)
+    : Program ix string :=
+    request (Read fd).
+
+  Definition close {ix} `{Use i ix} (fd: Z)
+    : Program ix unit :=
+    request (Close fd).
+End FileSystem.
+
+Declare ML Module "stdlib_fileSystem_plugin".
