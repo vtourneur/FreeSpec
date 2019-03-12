@@ -26,16 +26,16 @@ Require Import BinNums.
 Module FileSystem.
   Inductive i: Type -> Type :=
   | Open: string -> i Z
-  | Read: Z -> i string
+  | Read: Z -> Z -> i string
   | Close: Z -> i unit.
 
   Definition open {ix} `{Use i ix} (str: string)
     : Program ix Z :=
     request (Open str).
 
-  Definition read {ix} `{Use i ix} (fd: Z)
+  Definition read {ix} `{Use i ix} (n fd: Z)
     : Program ix string :=
-    request (Read fd).
+    request (Read n fd).
 
   Definition close {ix} `{Use i ix} (fd: Z)
     : Program ix unit :=

@@ -30,8 +30,9 @@ let install_interface =
   let open_ = function
     | [str] -> int_to_coqz (Obj.magic (openfile (string_of_coqstr str) [O_RDONLY] 0o640))
     | _ -> assert false in
-  let read = let buff = Bytes.create 10 in function
-    | [fd] -> ignore (read (Obj.magic (int_of_coqz fd)) buff 0 10);
+  let read = function
+    | [n; fd] -> let buff = Bytes.create (int_of_coqz n) in
+               ignore (read (Obj.magic (int_of_coqz fd)) buff 0 (int_of_coqz n));
                bytes_to_coqstr buff
     | _ -> assert false in
   let close = function
