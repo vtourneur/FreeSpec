@@ -27,6 +27,7 @@ Module FileSystem.
   Inductive i: Type -> Type :=
   | Open: string -> i Z
   | Read: Z -> Z -> i string
+  | Write: string -> Z -> i unit
   | Close: Z -> i unit.
 
   Definition open {ix} `{Use i ix} (str: string)
@@ -36,6 +37,10 @@ Module FileSystem.
   Definition read {ix} `{Use i ix} (n fd: Z)
     : Program ix string :=
     request (Read n fd).
+
+  Definition write {ix} `{Use i ix} (str: string) (fd: Z)
+    : Program ix unit :=
+    request (Write str fd).
 
   Definition close {ix} `{Use i ix} (fd: Z)
     : Program ix unit :=
