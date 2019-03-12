@@ -26,6 +26,7 @@ Require Import BinNums.
 Module FileSystem.
   Inductive i: Type -> Type :=
   | Open: string -> i Z
+  | GetSize: Z -> i Z
   | Read: Z -> Z -> i string
   | Write: string -> Z -> i unit
   | Close: Z -> i unit.
@@ -33,6 +34,10 @@ Module FileSystem.
   Definition open {ix} `{Use i ix} (str: string)
     : Program ix Z :=
     request (Open str).
+
+  Definition getSize {ix} `{Use i ix} (fd: Z)
+    : Program ix Z :=
+    request (GetSize fd).
 
   Definition read {ix} `{Use i ix} (n fd: Z)
     : Program ix string :=

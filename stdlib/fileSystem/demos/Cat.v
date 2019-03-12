@@ -28,7 +28,8 @@ Local Open Scope prelude_scope.
 
 Definition cat {ix} `{Use Console.i ix} `{Use FileSystem.i ix} : Program ix unit :=
   fd <- FileSystem.open "test.txt";
-  FileSystem.read 10 fd >>= Console.echo;;
+  size <- FileSystem.getSize fd;
+  FileSystem.read size fd >>= Console.echo;;
   FileSystem.close fd.
 
 Exec cat.
