@@ -24,16 +24,21 @@ Require Import FreeSpec.Program.
 Require Import BinNums.
 
 Module FileSystem.
+  Inductive mode: Type :=
+  | ReadOnly : mode
+  | WriteOnly : mode
+  | ReadWrite : mode.
+
   Inductive i: Type -> Type :=
-  | Open: string -> i Z
+  | Open: mode -> string -> i Z
   | GetSize: Z -> i Z
   | Read: Z -> Z -> i string
   | Write: string -> Z -> i unit
   | Close: Z -> i unit.
 
-  Definition open {ix} `{Use i ix} (str: string)
+  Definition open {ix} `{Use i ix} (m: mode) (str: string)
     : Program ix Z :=
-    request (Open str).
+    request (Open m str).
 
   Definition getSize {ix} `{Use i ix} (fd: Z)
     : Program ix Z :=

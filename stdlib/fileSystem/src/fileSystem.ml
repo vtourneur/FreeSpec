@@ -23,12 +23,34 @@ open Exec_plugin.Coqnum
 open Exec_plugin.Extends
 open Exec_plugin.Coqunit
 open Unix
+open Exec_plugin.Query
+open Exec_plugin.Utils
 
 let path = ["FreeSpec"; "Stdlib"; "FileSystem"; "FileSystem"]
 
+type mode_constructor = ReadOnly | WriteOnly | ReadWrite
+
+module Ind = struct
+  module Mode =
+    Inductive.Make(struct
+        type constructor = mode_constructor
+        let type_name = "mode"
+        let modlist = path
+        let names = [("ReadOnly", ReadOnly); ("WriteOnly", WriteOnly); ("ReadWrite", ReadWrite)]
+      end)
+end
+
+let coqmode_to_open_flagl m =
+  let (m, args) = app_full m in
+  match (Ind.Mode.constructor_of m, args) with
+  | (Some ReadOnly, []) -> [O_RDONLY]
+  | (Some WriteOnly, []) -> [O_WRONLY]
+  | (Some ReadWrite, []) -> [O_RDWR]
+  | _ -> raise (UnsupportedTerm "not a constructor of [FileSystem.mode]")
+
 let install_interface =
   let open_ = function
-    | [str] -> int_to_coqz (Obj.magic (openfile (string_of_coqstr str) [O_RDWR] 0o640))
+    | [m; str] -> int_to_coqz (Obj.magic (openfile (string_of_coqstr str) (coqmode_to_open_flagl m) 0o640))
     | _ -> assert false in
   let getSize = function
     | [fd] -> int_to_coqz (fstat (Obj.magic (int_of_coqz fd))).st_size

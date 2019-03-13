@@ -22,12 +22,11 @@ Require Import FreeSpec.Stdlib.Console.
 Require Import FreeSpec.Stdlib.FileSystem.
 Require Import FreeSpec.Program.
 Require Import Prelude.Control.
-Require Import BinInt.
 
 Local Open Scope prelude_scope.
 
 Definition cat {ix} `{Use Console.i ix} `{Use FileSystem.i ix} : Program ix unit :=
-  fd <- FileSystem.open "test.txt";
+  fd <- FileSystem.open FileSystem.ReadOnly "test.txt";
   size <- FileSystem.getSize fd;
   FileSystem.read size fd >>= Console.echo;;
   FileSystem.close fd.
