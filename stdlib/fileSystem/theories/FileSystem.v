@@ -29,11 +29,17 @@ Module FileSystem.
   | WriteOnly : mode
   | ReadWrite : mode.
 
+  Inductive seekRef: Type :=
+  | Beginning : seekRef
+  | Current : seekRef
+  | End : seekRef.
+
   Inductive i: Type -> Type :=
   | Open: mode -> string -> i Z
   | GetSize: Z -> i Z
   | Read: Z -> Z -> i string
   | Write: string -> Z -> i unit
+  | Seek: seekRef -> Z -> Z -> i unit
   | Close: Z -> i unit.
 
   Definition open {ix} `{Use i ix} (m: mode) (str: string)
@@ -51,6 +57,10 @@ Module FileSystem.
   Definition write {ix} `{Use i ix} (str: string) (fd: Z)
     : Program ix unit :=
     request (Write str fd).
+
+  Definition seek {ix} `{Use i ix} (ref: seekRef) (n fd: Z)
+    : Program ix unit :=
+    request (Seek ref n fd).
 
   Definition close {ix} `{Use i ix} (fd: Z)
     : Program ix unit :=
