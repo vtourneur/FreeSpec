@@ -123,6 +123,9 @@ let install_interface =
                                    (create_open_flags_list m c)
                                    0o640))
     | _ -> assert false in
+  let openDir = function
+    | [str] -> int_to_coqz (Obj.magic (opendir (string_of_coqstr str)))
+    | _ -> assert false in
   let fStat = function
     | [fd] -> stats_to_coqstats (fstat (coqz_to_fd fd))
     | _ -> assert false in
@@ -133,6 +136,9 @@ let install_interface =
     | [n; fd] -> let buff = Bytes.create (int_of_coqz n) in
                ignore (read (coqz_to_fd fd) buff 0 (int_of_coqz n));
                bytes_to_coqstr buff
+    | _ -> assert false in
+  let readDir = function
+    | [dh] -> string_to_coqstr (readdir (coqz_to_dh dh))
     | _ -> assert false in
   let write = function
     | [str; fd] -> let buff = bytes_of_coqstr str in
@@ -148,6 +154,11 @@ let install_interface =
     | [fd] -> close (coqz_to_fd fd);
                coqtt
     | _ -> assert false in
-  register_interface path [("Stat", stat); ("Open", open_); ("FStat", fStat);
-                           ("GetSize", getSize); ("Read", read); ("Write", write);
-                           ("Seek", seek); ("Close", close)]
+  let closeDir = function
+    | [dh] -> closedir (coqz_to_dh dh);
+               coqtt
+    | _ -> assert false in
+  register_interface path [("Stat", stat); ("Open", open_); ("OpenDir", openDir);
+                           ("FStat", fStat); ("GetSize", getSize); ("Read", read);
+                           ("ReadDir", readDir); ("Write", write); ("Seek", seek);
+                           ("Close", close); ("CloseDir", closeDir)]

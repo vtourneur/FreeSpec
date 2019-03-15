@@ -59,12 +59,15 @@ Module FileSystem.
   Inductive i: Type -> Type :=
   | Stat: string -> i stats
   | Open: mode -> bool -> string -> i Z
+  | OpenDir: string -> i Z
   | FStat: Z -> i stats
   | GetSize: Z -> i Z
   | Read: Z -> Z -> i string
+  | ReadDir: Z -> i string
   | Write: string -> Z -> i unit
   | Seek: seekRef -> Z -> Z -> i unit
-  | Close: Z -> i unit.
+  | Close: Z -> i unit
+  | CloseDir: Z -> i unit.
 
   Definition stat {ix} `{Use i ix} (str: string)
     : Program ix stats :=
@@ -74,17 +77,25 @@ Module FileSystem.
     : Program ix Z :=
     request (Open m create str).
 
-  Definition getSize {ix} `{Use i ix} (fd: Z)
+  Definition openDir {ix} `{Use i ix} (str: string)
     : Program ix Z :=
-    request (GetSize fd).
+    request (OpenDir str).
 
   Definition fStat {ix} `{Use i ix} (fd: Z)
     : Program ix stats :=
     request (FStat fd).
 
+  Definition getSize {ix} `{Use i ix} (fd: Z)
+    : Program ix Z :=
+    request (GetSize fd).
+
   Definition read {ix} `{Use i ix} (n fd: Z)
     : Program ix string :=
     request (Read n fd).
+
+  Definition readDir {ix} `{Use i ix} (dh: Z)
+    : Program ix string :=
+    request (ReadDir dh).
 
   Definition write {ix} `{Use i ix} (str: string) (fd: Z)
     : Program ix unit :=
@@ -97,6 +108,10 @@ Module FileSystem.
   Definition close {ix} `{Use i ix} (fd: Z)
     : Program ix unit :=
     request (Close fd).
+
+  Definition closeDir {ix} `{Use i ix} (dh: Z)
+    : Program ix unit :=
+    request (CloseDir dh).
 End FileSystem.
 
 Declare ML Module "stdlib_fileSystem_plugin".
