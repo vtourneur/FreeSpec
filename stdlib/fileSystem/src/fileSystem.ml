@@ -30,6 +30,8 @@ let path = ["FreeSpec"; "Stdlib"; "FileSystem"; "FileSystem"]
 
 type mode_constructor = ReadOnly | WriteOnly | ReadWrite
 type seekRef_constructor = Beginning | Current | End
+type fileKind_constructor = Reg | Dir | Chr | Blk | Lnk | Fifo | Sock
+type stats_constructor = MkStats
 
 module Ind = struct
   module Mode =
@@ -47,6 +49,21 @@ module Ind = struct
         let modlist = path
         let names = [("Beginning", Beginning); ("Current", Current); ("End", End)]
       end)
+
+  module FileKind =
+    Inductive.Make(struct
+        type constructor = fileKind_constructor
+        let type_name = "fileKind"
+        let modlist = path
+        let names = [("Reg", Reg); ("Dir", Dir); ("Chr", Chr); ("Blk", Blk); ("Lnk", Lnk); ("Fifo", Fifo); ("Sock", Sock)]
+      end)
+  module Stats =
+    Inductive.Make(struct
+        type constructor = stats_constructor
+        let type_name = "stats"
+        let modlist = path
+        let names = [("MkStats", MkStats)]
+      end)
 end
 
 let coqmode_to_open_flagl m =
@@ -63,14 +80,40 @@ let coqseekRef_to_seek_command ref =
   | (Some Beginning, []) -> SEEK_SET
   | (Some Current, []) -> SEEK_CUR
   | (Some End, []) -> SEEK_END
-  | _ -> raise (UnsupportedTerm "not a constructor of [FileSystem.mode]")
+  | _ -> raise (UnsupportedTerm "not a constructor of [FileSystem.seekRef]")
+
+let coqfileKind_of_file_kind = function
+  | S_REG -> Ind.FileKind.mkConstructor "Reg"
+  | S_DIR -> Ind.FileKind.mkConstructor "Dir"
+  | S_CHR -> Ind.FileKind.mkConstructor "Chr"
+  | S_BLK -> Ind.FileKind.mkConstructor "Blk"
+  | S_LNK -> Ind.FileKind.mkConstructor "Lnk"
+  | S_FIFO -> Ind.FileKind.mkConstructor "Fifo"
+  | S_SOCK -> Ind.FileKind.mkConstructor "Sock"
 
 let coqz_to_fd : Constr.constr -> file_descr =
   fun z -> Obj.magic (int_of_coqz z)
+let coqz_to_dh : Constr.constr -> dir_handle =
+  fun z -> Obj.magic (int_of_coqz z)
+
+let stats_to_coqstats s =
+ Constr.mkApp ((Ind.Stats.mkConstructor "MkStats"),
+         (Array.of_list [int_to_coqz s.st_dev; int_to_coqz s.st_ino;
+                         coqfileKind_of_file_kind s.st_kind; int_to_coqz s.st_perm;
+                         int_to_coqz s.st_nlink; int_to_coqz s.st_uid;
+                         int_to_coqz s.st_gid; int_to_coqz s.st_rdev;
+                         int_to_coqz s.st_size]))
 
 let install_interface =
+  let stat = function
+    | [str] -> stats_to_coqstats (stat (string_of_coqstr str))
+    | _ -> assert false in
   let open_ = function
-    | [m; str] -> int_to_coqz (Obj.magic (openfile (string_of_coqstr str) (coqmode_to_open_flagl m) 0o640))
+    | [m; str] -> int_to_coqz (Obj.magic (openfile (string_of_coqstr str)
+                                                   (coqmode_to_open_flagl m) 0o640))
+    | _ -> assert false in
+  let fStat = function
+    | [fd] -> stats_to_coqstats (fstat (coqz_to_fd fd))
     | _ -> assert false in
   let getSize = function
     | [fd] -> int_to_coqz (fstat (coqz_to_fd fd)).st_size
@@ -86,11 +129,14 @@ let install_interface =
                  coqtt
     | _ -> assert false in
   let seek = function
-    | [ref; n; fd] -> ignore (lseek (coqz_to_fd fd) (int_of_coqz n) (coqseekRef_to_seek_command ref));
+    | [ref; n; fd] -> ignore (lseek (coqz_to_fd fd) (int_of_coqz n)
+                                    (coqseekRef_to_seek_command ref));
                       coqtt
     | _ -> assert false in
   let close = function
     | [fd] -> close (coqz_to_fd fd);
                coqtt
     | _ -> assert false in
-  register_interface path [("Open", open_); ("GetSize", getSize); ("Read", read); ("Write", write); ("Seek", seek); ("Close", close)]
+  register_interface path [("Stat", stat); ("Open", open_); ("FStat", fStat);
+                           ("GetSize", getSize); ("Read", read); ("Write", write);
+                           ("Seek", seek); ("Close", close)]

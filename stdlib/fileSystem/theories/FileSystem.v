@@ -21,7 +21,7 @@
 Require Import FreeSpec.Exec.
 Require Export Coq.Strings.String.
 Require Import FreeSpec.Program.
-Require Import BinNums.
+Require Import BinInt.
 
 Module FileSystem.
   Inductive mode: Type :=
@@ -34,13 +34,41 @@ Module FileSystem.
   | Current : seekRef
   | End : seekRef.
 
+  Inductive fileKind: Type :=
+  | Reg : fileKind
+  | Dir : fileKind
+  | Chr : fileKind
+  | Blk : fileKind
+  | Lnk : fileKind
+  | Fifo : fileKind
+  | Sock : fileKind.
+
+  Record stats: Type := MkStats
+  {
+    dev : Z;
+    ino : Z;
+    kind : fileKind;
+    perm : Z;
+    nlink : Z;
+    uid : Z;
+    gid : Z;
+    rdev : Z;
+    size : Z;
+  }.
+
   Inductive i: Type -> Type :=
+  | Stat: string -> i stats
   | Open: mode -> string -> i Z
+  | FStat: Z -> i stats
   | GetSize: Z -> i Z
   | Read: Z -> Z -> i string
   | Write: string -> Z -> i unit
   | Seek: seekRef -> Z -> Z -> i unit
   | Close: Z -> i unit.
+
+  Definition stat {ix} `{Use i ix} (str: string)
+    : Program ix stats :=
+    request (Stat str).
 
   Definition open {ix} `{Use i ix} (m: mode) (str: string)
     : Program ix Z :=
@@ -49,6 +77,10 @@ Module FileSystem.
   Definition getSize {ix} `{Use i ix} (fd: Z)
     : Program ix Z :=
     request (GetSize fd).
+
+  Definition fStat {ix} `{Use i ix} (fd: Z)
+    : Program ix stats :=
+    request (FStat fd).
 
   Definition read {ix} `{Use i ix} (n fd: Z)
     : Program ix string :=
