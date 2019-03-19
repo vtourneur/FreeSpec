@@ -33,7 +33,7 @@ type seekRef_constructor = Beginning | Current | End
 type fileKind_constructor = Reg | Dir | Chr | Blk | Lnk | Fifo | Sock
 type stats_constructor = MkStats
 
-module Ind = struct
+module Ind_fs = struct
   module Mode =
     Inductive.Make(struct
         type constructor = mode_constructor
@@ -66,30 +66,38 @@ module Ind = struct
       end)
 end
 
-let coqmode_to_open_flagl m =
-  let (m, args) = app_full m in
-  match (Ind.Mode.constructor_of m, args) with
-  | (Some ReadOnly, []) -> [O_RDONLY]
-  | (Some WriteOnly, []) -> [O_WRONLY]
-  | (Some ReadWrite, []) -> [O_RDWR]
-  | _ -> raise (UnsupportedTerm "not a constructor of [FileSystem.mode]")
+let create_open_flags_list m c =
+  let coqmode_to_open_flag_l m =
+    let (m, args) = app_full m in
+    match (Ind_fs.Mode.constructor_of m, args) with
+    | (Some ReadOnly, []) -> [O_RDONLY]
+    | (Some WriteOnly, []) -> [O_WRONLY]
+    | (Some ReadWrite, []) -> [O_RDWR]
+    | _ -> raise (UnsupportedTerm "not a constructor of [FileSystem.mode]") in
+  let coqbool_create_to_open_flag_l c =
+    let (c, args) = app_full c in
+    match (Ind.Bool.constructor_of c, args) with
+    | (Some true, []) -> [O_CREAT]
+    | (Some false, []) -> []
+    | _ -> raise (UnsupportedTerm "not a constructor of [bool]") in
+  (coqmode_to_open_flag_l m) @ (coqbool_create_to_open_flag_l c)
 
 let coqseekRef_to_seek_command ref =
   let (ref, args) = app_full ref in
-  match (Ind.SeekRef.constructor_of ref, args) with
+  match (Ind_fs.SeekRef.constructor_of ref, args) with
   | (Some Beginning, []) -> SEEK_SET
   | (Some Current, []) -> SEEK_CUR
   | (Some End, []) -> SEEK_END
   | _ -> raise (UnsupportedTerm "not a constructor of [FileSystem.seekRef]")
 
 let coqfileKind_of_file_kind = function
-  | S_REG -> Ind.FileKind.mkConstructor "Reg"
-  | S_DIR -> Ind.FileKind.mkConstructor "Dir"
-  | S_CHR -> Ind.FileKind.mkConstructor "Chr"
-  | S_BLK -> Ind.FileKind.mkConstructor "Blk"
-  | S_LNK -> Ind.FileKind.mkConstructor "Lnk"
-  | S_FIFO -> Ind.FileKind.mkConstructor "Fifo"
-  | S_SOCK -> Ind.FileKind.mkConstructor "Sock"
+  | S_REG -> Ind_fs.FileKind.mkConstructor "Reg"
+  | S_DIR -> Ind_fs.FileKind.mkConstructor "Dir"
+  | S_CHR -> Ind_fs.FileKind.mkConstructor "Chr"
+  | S_BLK -> Ind_fs.FileKind.mkConstructor "Blk"
+  | S_LNK -> Ind_fs.FileKind.mkConstructor "Lnk"
+  | S_FIFO -> Ind_fs.FileKind.mkConstructor "Fifo"
+  | S_SOCK -> Ind_fs.FileKind.mkConstructor "Sock"
 
 let coqz_to_fd : Constr.constr -> file_descr =
   fun z -> Obj.magic (int_of_coqz z)
@@ -97,7 +105,7 @@ let coqz_to_dh : Constr.constr -> dir_handle =
   fun z -> Obj.magic (int_of_coqz z)
 
 let stats_to_coqstats s =
- Constr.mkApp ((Ind.Stats.mkConstructor "MkStats"),
+ Constr.mkApp ((Ind_fs.Stats.mkConstructor "MkStats"),
          (Array.of_list [int_to_coqz s.st_dev; int_to_coqz s.st_ino;
                          coqfileKind_of_file_kind s.st_kind; int_to_coqz s.st_perm;
                          int_to_coqz s.st_nlink; int_to_coqz s.st_uid;
@@ -109,8 +117,11 @@ let install_interface =
     | [str] -> stats_to_coqstats (stat (string_of_coqstr str))
     | _ -> assert false in
   let open_ = function
-    | [m; str] -> int_to_coqz (Obj.magic (openfile (string_of_coqstr str)
-                                                   (coqmode_to_open_flagl m) 0o640))
+    | [m; c; str] -> int_to_coqz (Obj.magic
+                                  (openfile
+                                   (string_of_coqstr str)
+                                   (create_open_flags_list m c)
+                                   0o640))
     | _ -> assert false in
   let fStat = function
     | [fd] -> stats_to_coqstats (fstat (coqz_to_fd fd))

@@ -58,7 +58,7 @@ Module FileSystem.
 
   Inductive i: Type -> Type :=
   | Stat: string -> i stats
-  | Open: mode -> string -> i Z
+  | Open: mode -> bool -> string -> i Z
   | FStat: Z -> i stats
   | GetSize: Z -> i Z
   | Read: Z -> Z -> i string
@@ -70,9 +70,9 @@ Module FileSystem.
     : Program ix stats :=
     request (Stat str).
 
-  Definition open {ix} `{Use i ix} (m: mode) (str: string)
+  Definition open {ix} `{Use i ix} (m: mode) (create: bool) (str: string)
     : Program ix Z :=
-    request (Open m str).
+    request (Open m create str).
 
   Definition getSize {ix} `{Use i ix} (fd: Z)
     : Program ix Z :=
